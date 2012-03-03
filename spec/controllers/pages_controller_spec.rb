@@ -1,3 +1,5 @@
+class PagesController < ApplicationController
+
 require 'spec_helper'
 
 describe PagesController do
@@ -58,5 +60,9 @@ describe PagesController do
       response.should have_selector("title",
                                     :content => @base_title + " | Help")
     end
+  end
+end
+  def help
+    @title = "Help"
   end
 end
