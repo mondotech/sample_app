@@ -1,17 +1,6 @@
-# == Schema Information
-#
-# Table name: users
-#
-#  id         :integer         not null, primary key
-#  name       :string(255)
-#  email      :string(255)
-#  created_at :datetime
-#  updated_at :datetime
-#
+ require 'spec_helper'
 
-require 'spec_helper'
-
-describe User do
+ describe User do
 
   before(:each) do
     @attr = {
@@ -31,23 +20,23 @@ describe User do
     no_name_user.should_not be_valid
   end
 
-   it "should require an email address" do
+  it "should require an email address" do
     no_email_user = User.new(@attr.merge(:email => ""))
     no_email_user.should_not be_valid
   end
 
-    it "should reject names that are too long" do
+  it "should reject names that are too long" do
      long_name = "a" * 51
      long_name_user = User.new(@attr.merge(:name => long_name))
      long_name_user.should_not be_valid
-    end
+  end
 
-    it "should accept valid email addresses" do
+  it "should accept valid email addresses" do
       addresses = %w[user@foo.com THE_USER@foo.bar.org first.last@foo.jp]
       addresses.each do |address|
         valid_email_user = User.new(@attr.merge(:email => address))
         valid_email_user.should be_valid
-    end
+   end
   end
 
   it "should reject invalid email addresses" do
@@ -59,7 +48,6 @@ describe User do
   end
 
   it "should reject duplicate email addresses" do
-    # Put a user with given email address into the database.
     User.create!(@attr)
     user_with_duplicate_email = User.new(@attr)
     user_with_duplicate_email.should_not be_valid
@@ -95,7 +83,7 @@ describe User do
       hash = @attr.merge(:password => long, :password_confirmation => long)
       User.new(hash).should_not be_valid
     end
-  end
+  end #describe password val
 
   describe "password encryption" do
 
@@ -106,10 +94,10 @@ describe User do
     it "should have an encrypted password attribute" do
       @user.should respond_to(:encrypted_password)
     end
-    it "should set the encrypted password" do
+
+    it "should set the encrypted password attribute" do
       @user.encrypted_password.should_not be_blank
-    end
-  
+    end  
 
     describe "has_password? method" do
 
@@ -120,8 +108,9 @@ describe User do
       it "should be false if the passwords don't match" do
         @user.has_password?("invalid").should be_false
       end 
-    end
-      describe "authenticate method" do
+    end #describe has_password
+
+    describe "authenticate method" do
 
       it "should return nil on email/password mismatch" do
         wrong_password_user = User.authenticate(@attr[:email], "wrongpass")
@@ -137,6 +126,27 @@ describe User do
         matching_user = User.authenticate(@attr[:email], @attr[:password])
         matching_user.should == @user
       end
-    end
-  end
-end
+   end #describe auth method
+ end #describe password encryption
+
+ describe "admin attribute" do
+
+   before(:each) do
+     @user = User.create!(@attr)
+   end
+
+   it "should respond to admin" do
+     @user.should respond_to(:admin)
+   end
+
+   it "should not be an admin by default" do
+     @user.should_not be_admin
+   end
+
+   it "should be convertible to an admin" do
+     @user.toggle!(:admin)
+     @user.should be_admin
+   end
+ end #describe admin attrib
+
+end #describe User
