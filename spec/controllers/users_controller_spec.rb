@@ -22,7 +22,7 @@ describe UsersController do
 
        @users = [@user, second, third]
         30.times do
-      @users <<  Factory(:user, :name => Factory.next(:name),
+       @users <<  Factory(:user, :name => Factory.next(:name),
                                    :email => Factory.next(:email))
         end
       end
@@ -53,8 +53,26 @@ describe UsersController do
                                            :content => "2")
         response.should have_selector("a", :href => "/users?page=2",
                                            :content => "Next")
-      end    
-    end #describe signed in
+      end 
+
+       it "should not show delete link for non-admin user" do
+        normal_user = Factory(:user, :email => "normal@user.com", :admin => false)
+        test_sign_in(normal_user)
+        get :index
+        @users.each do |user|
+           response.should_not have_selector("a", :content => "delete")
+        end
+      end
+     
+      it "should show delete link for admin user" do
+        admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in(admin)        
+        get :index
+        @users.each do |user|
+           response.should have_selector("a", :content => "delete")
+        end
+      end   
+    end #describe for signed in users
   end #describe GET index
   
 
@@ -321,9 +339,17 @@ describe UsersController do
     describe "as an admin user" do
 
       before(:each) do
-        admin = Factory(:user, :email => "admin@example.com", :admin => true)
-        test_sign_in(admin)
+        @admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in(@admin)
       end
+
+      it "should prevent admin users from destroying themselves" do
+        lambda do
+          delete :destroy, :id => @admin
+        end.should_not change(User, :count) 
+        response.should redirect_to(users_path)
+      end
+
 
       it "should destroy the user" do
         lambda do
@@ -335,6 +361,6 @@ describe UsersController do
         delete :destroy, :id => @user
         response.should redirect_to(users_path)
       end
-    end
+    end #describe as admin user
   end #describe DELETE destroy
 end #describe UsersController 
