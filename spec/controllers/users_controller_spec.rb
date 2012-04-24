@@ -20,10 +20,9 @@ describe UsersController do
         second = Factory(:user, :name => "Bob", :email => "another@example.com")
         third  = Factory(:user, :name => "Ben", :email => "another@example.net")
 
-       @users = [@user, second, third]
+      # @users = [@user, second, third] Users <<
         30.times do
-       @users <<  Factory(:user, :name => Factory.next(:name),
-                                   :email => Factory.next(:email))
+          Factory(:user, :name => Factory.next(:name), :email => Factory.next(:email))
         end
       end
 
@@ -40,7 +39,8 @@ describe UsersController do
 
       it "should have an element for each user" do
         get :index
-        @users[0..2].each do |user|
+        #@users[0..2].each do |user|
+        User.paginate(:page => 1).each do |user|
           response.should have_selector("li", :content => user.name)
         end
       end
@@ -55,59 +55,86 @@ describe UsersController do
                                            :content => "Next")
       end 
 
-       it "should not show delete link for non-admin user" do
-        normal_user = Factory(:user, :email => "normal@user.com", :admin => false)
-        test_sign_in(normal_user)
+      it "should have delete links for admins" do
+        @user.toggle!(:admin)
+        other_user = User.all.second
         get :index
-        @users.each do |user|
-           response.should_not have_selector("a", :content => "delete")
-        end
+        response.should have_selector('a', :href => user_path(other_user), :content => "delete")
       end
-     
-      it "should show delete link for admin user" do
-        admin = Factory(:user, :email => "admin@example.com", :admin => true)
-        test_sign_in(admin)        
+
+      it "should not have delete links for non-admins" do
+        other_user = User.all.second
         get :index
-        @users.each do |user|
-           response.should have_selector("a", :content => "delete")
-        end
-      end   
+        response.should_not have_selector('a', :href => user_path(other_user), :content => "delete")
+      end
+ 
     end #describe for signed in users
-  end #describe GET index
-  
+  end #describe GET index  
 
 
   describe "GET 'show'" do
-
-    before(:each) do 
+        
+    before(:each) do
       @user = Factory(:user)
     end
-
+  
     it "should be successful" do
       get :show, :id => @user
       response.should be_success
     end
-
+    
     it "should find the right user" do
       get :show, :id => @user
       assigns(:user).should == @user
     end
-
+    
     it "should have the right title" do
       get :show, :id => @user
       response.should have_selector('title', :content => @user.name)
     end
-
-
-  it "should include the user's name" do
+    
+    it "should have the user's name" do
       get :show, :id => @user
-      response.should have_selector("h1", :content => @user.name)
+      response.should have_selector('h1', :content => @user.name)
     end
-
+    
     it "should have a profile image" do
       get :show, :id => @user
-      response.should have_selector("h1>img", :class => "gravatar")
+      response.should have_selector('h1>img', :class => "gravatar")
     end
+    
+    it "should have the right URL" do
+      get :show, :id => @user
+      response.should have_selector('td>a', :content => user_path(@user), :href => user_path(@user))
+    end
+    
+    it "should show the user's microposts" do
+      mp1 = Factory(:micropost, :user => @user, :content => "Foo bar")
+      mp2 = Factory(:micropost, :user => @user, :content => "Baz quux")
+      get :show, :id => @user
+      response.should have_selector('span.content', :content => mp1.content)
+      response.should have_selector('span.content', :content => mp2.content)
+    end
+    
+    it "should paginate microposts" do
+      35.times { Factory(:micropost, :user => @user, :content => "foo") }
+      get :show, :id => @user
+      response.should have_selector('div.pagination')
+    end
+    
+    it "should display the micropost count" do
+      10.times { Factory(:micropost, :user => @user, :content => "foo") }
+      get :show, :id => @user
+      response.should have_selector('td.sidebar', :content => @user.microposts.count.to_s)
+    end
+    
+    describe "when signed in as another user" do
+      it "should be successful" do
+        test_sign_in(Factory(:user, :email => Factory.next(:email)))
+        get :show, :id => @user
+        response.should be_success
+      end
+    end    
   end #describe GET show
 
   describe "GET 'new'" do
@@ -349,7 +376,6 @@ describe UsersController do
         end.should_not change(User, :count) 
         response.should redirect_to(users_path)
       end
-
 
       it "should destroy the user" do
         lambda do
