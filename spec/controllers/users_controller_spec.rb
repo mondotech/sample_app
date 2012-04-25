@@ -134,6 +134,7 @@ describe UsersController do
         get :show, :id => @user
         response.should be_success
       end
+      
     end    
   end #describe GET show
 
